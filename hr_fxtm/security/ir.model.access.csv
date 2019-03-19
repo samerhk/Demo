@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_hr_fxtm_hr_fxtm,hr_fxtm.hr_fxtm,model_hr_fxtm_hr_fxtm,,1,0,0,0
+access_account_analytic_account_leaves_manager,account.analytic.account,analytic.model_account_analytic_account,hr_fxtm.group_hr_holidays_approval,1,0,0,0

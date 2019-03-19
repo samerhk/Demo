@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <data>
+
+        <record id="edit_holiday_status_form_fxtm" model="ir.ui.view">
+            <field name="name">fxtm.hr.leave.type.form</field>
+            <field name="model">hr.leave.type</field>
+            <field name="inherit_id" ref="hr_holidays.edit_holiday_status_form"/>
+            <field name="arch" type="xml">
+                <field name="double_validation" position="after">
+                    <field name="third_approval"/>
+                </field>
+            </field>
+        </record>
+
+
+        <record id="hr_leave_view_form_fxtm" model="ir.ui.view">
+            <field name="name">fxtm.hr.leave.form</field>
+            <field name="model">hr.leave</field>
+            <field name="inherit_id" ref="hr_holidays.hr_leave_view_form"/>
+            <field name="arch" type="xml">
+                <button  name="action_validate" position="replace">
+                    <button string="Validate" name="action_validate_2" states="validate1" type="object"
+                            groups="hr_holidays.group_hr_holidays_manager" class="oe_highlight"/>
+                    <button string="Third Validation" name="action_validate" states="validate2" type="object"
+                          groups="hr_fxtm.group_hr_holidays_optional" class="oe_highlight"/>
+                </button>
+            </field>
+        </record>
+
+
+    </data>
+</odoo>

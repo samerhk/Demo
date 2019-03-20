@@ -28,11 +28,9 @@ class HolidaysRequest(models.Model):
     def action_validate_2(self):
         # if validation_type == 'both': this method is the first approval approval
         # if validation_type != 'both': this method calls action_validate() below
-        if self.third_approval:
-            self.filtered(lambda hol: hol.validation_type == 'both').write(
+        self.filtered(lambda hol: hol.third_approval == True).write(
                 {'state': 'validate2'})
-        else:
-            self.filtered(lambda hol: not hol.validation_type == 'both').action_validate()
+        self.filtered(lambda hol: hol.validation_type == 'both').action_validate()
         if not self.env.context.get('leave_fast_create'):
             self.activity_update()
 

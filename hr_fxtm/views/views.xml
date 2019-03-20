@@ -20,9 +20,9 @@
             <field name="inherit_id" ref="hr_holidays.hr_leave_view_form"/>
             <field name="arch" type="xml">
                 <button  name="action_validate" position="replace">
-                    <button string="Validate" name="action_validate_2" states="validate1" type="object"
+                    <button string="Approve" name="action_validate_2" states="validate1" type="object"
                             groups="hr_holidays.group_hr_holidays_manager" class="oe_highlight"/>
-                    <button string="Third Validation" name="action_validate" states="validate2" type="object"
+                    <button string="Approve" name="action_validate" states="validate2" type="object"
                           groups="hr_fxtm.group_hr_holidays_optional" class="oe_highlight"/>
                 </button>
             </field>

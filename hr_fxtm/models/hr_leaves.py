@@ -4,6 +4,7 @@ from odoo import models, fields, api, _
 from lxml import etree
 from odoo.exceptions import AccessError, UserError, ValidationError
 
+
 class HolidaysRequest(models.Model):
     _inherit = 'hr.leave'
 
@@ -23,22 +24,22 @@ class HolidaysRequest(models.Model):
 
     third_approval = fields.Boolean(related='holiday_status_id.third_approval')
 
-
-
     @api.multi
     def action_validate_2(self):
         # if validation_type == 'both': this method is the first approval approval
         # if validation_type != 'both': this method calls action_validate() below
         if self.third_approval:
             self.filtered(lambda hol: hol.validation_type == 'both').write(
-            {'state': 'validate2'})
+                {'state': 'validate2'})
         else:
             self.filtered(lambda hol: not hol.validation_type == 'both').action_validate()
+        if not self.env.context.get('leave_fast_create'):
+            self.activity_update()
 
     @api.multi
     def action_validate(self):
         current_employee = self.env['hr.employee'].search([('user_id', '=', self.env.uid)], limit=1)
-        if any(holiday.state not in ['confirm', 'validate1','validate2'] for holiday in self):
+        if any(holiday.state not in ['confirm', 'validate1', 'validate2'] for holiday in self):
             raise UserError(_('Leave request must be confirmed in order to approve it.'))
 
         self.write({'state': 'validate'})
@@ -77,29 +78,74 @@ class HolidaysRequest(models.Model):
         if not self.env.context.get('leave_fast_create'):
             employee_requests.activity_update()
         return True
+    @api.model
+    def get_users(self,group_ext_id):
+        module, ext_id = group_ext_id.split('.')
+        self._cr.execute("""SELECT uid FROM res_groups_users_rel WHERE gid IN
+                                    (SELECT res_id FROM ir_model_data WHERE module=%s AND name=%s) LIMIT 1 """,
+                         (module, ext_id))
+        return self.env['res.users'].browse(self._cr.fetchone())
+
+    def _get_responsible_for_approval(self):
+        if self.state == 'confirm' and self.manager_id.user_id:
+            return self.manager_id.user_id
+        elif self.state == 'confirm' and self.employee_id.parent_id.user_id:
+            return self.employee_id.parent_id.user_id
+        elif self.state == 'validate2':
+            return self.get_users('hr_fxtm.group_hr_holidays_optional')
+        elif self.department_id.manager_id.user_id:
+            return self.department_id.manager_id.user_id
+        return self.env.user
+
+    def activity_update(self):
+        to_clean, to_do = self.env['hr.leave'], self.env['hr.leave']
+        for holiday in self:
+            if holiday.state == 'draft':
+                to_clean |= holiday
+            elif holiday.state == 'confirm':
+                holiday.activity_schedule(
+                    'hr_holidays.mail_act_leave_approval',
+                    user_id=holiday.sudo()._get_responsible_for_approval().id)
+            elif holiday.state == 'validate1':
+                holiday.activity_feedback(['hr_holidays.mail_act_leave_approval'])
+                holiday.activity_schedule(
+                    'hr_holidays.mail_act_leave_second_approval',
+                    user_id=holiday.sudo()._get_responsible_for_approval().id)
+            elif holiday.state == 'validate2':
+                holiday.activity_feedback(['hr_holidays.mail_act_leave_approval'])
+                holiday.activity_schedule(
+                    'hr_holidays.mail_act_leave_second_approval',
+                    user_id=holiday.sudo()._get_responsible_for_approval().id)
+            elif holiday.state == 'validate':
+                to_do |= holiday
+            elif holiday.state == 'refuse':
+                to_clean |= holiday
+        if to_clean:
+            to_clean.activity_unlink(
+                ['hr_holidays.mail_act_leave_approval', 'hr_holidays.mail_act_leave_second_approval'])
+        if to_do:
+            to_do.activity_feedback(
+                ['hr_holidays.mail_act_leave_approval', 'hr_holidays.mail_act_leave_second_approval'])
 
 
 class HolidaysType(models.Model):
     _inherit = "hr.leave.type"
-
 
     third_approval = fields.Boolean('Additional validation required', default=False)
     third_user = fields.Many2one(
         'hr.employee', string='Additional user to Approval')
 
 
-
 class Employee(models.Model):
     _inherit = "hr.employee"
 
-
     current_leave_state = fields.Selection(compute='_compute_leave_status', string="Current Leave Status",
-        selection=[
-            ('draft', 'New'),
-            ('confirm', 'Waiting Approval'),
-            ('refuse', 'Refused'),
-            ('validate1', 'Waiting Second Approval'),
-            ('validate2', 'Waiting Third Approval'),
-            ('validate', 'Approved'),
-            ('cancel', 'Cancelled')
-        ])
+                                           selection=[
+                                               ('draft', 'New'),
+                                               ('confirm', 'Waiting Approval'),
+                                               ('refuse', 'Refused'),
+                                               ('validate1', 'Waiting Second Approval'),
+                                               ('validate2', 'Waiting Third Approval'),
+                                               ('validate', 'Approved'),
+                                               ('cancel', 'Cancelled')
+                                           ])

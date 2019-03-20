@@ -25,6 +25,23 @@ class HolidaysRequest(models.Model):
     third_approval = fields.Boolean(related='holiday_status_id.third_approval')
 
     @api.multi
+    def action_approve(self):
+        # if validation_type == 'both': this method is the first approval approval
+        # if validation_type != 'both': this method calls action_validate() below
+        if any(holiday.state != 'confirm' for holiday in self):
+            raise UserError(_('Leave request must be confirmed ("To Approve") in order to approve it.'))
+
+        current_employee = self.env['hr.employee'].search([('user_id', '=', self.env.uid)], limit=1)
+
+        self.filtered(lambda hol: hol.validation_type == 'both' or  hol.third_approval).write(
+            {'state': 'validate1', 'first_approver_id': current_employee.id})
+        self.filtered(lambda hol: not hol.validation_type == 'both' and not hol.third_approval).action_validate()
+
+        if not self.env.context.get('leave_fast_create'):
+            self.activity_update()
+        return True
+
+    @api.multi
     def action_validate_2(self):
         # if validation_type == 'both': this method is the first approval approval
         # if validation_type != 'both': this method calls action_validate() below

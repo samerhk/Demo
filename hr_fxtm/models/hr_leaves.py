@@ -50,7 +50,7 @@ class HolidaysRequest(models.Model):
         # if validation_type != 'both': this method calls action_validate() below
         self.filtered(lambda hol: hol.third_approval == True).write(
                 {'state': 'validate2'})
-        self.filtered(lambda hol: hol.validation_type == 'both').action_validate()
+        self.filtered(lambda hol: hol.validation_type == 'both'and not hol.third_approval).action_validate()
         if not self.env.context.get('leave_fast_create'):
             self.activity_update()
 

@@ -33,10 +33,13 @@ class HolidaysRequest(models.Model):
 
         current_employee = self.env['hr.employee'].search([('user_id', '=', self.env.uid)], limit=1)
 
-        self.filtered(lambda hol: hol.validation_type == 'both' or  hol.third_approval).write(
+        self.filtered(lambda hol: hol.validation_type == 'both').write(
             {'state': 'validate1', 'first_approver_id': current_employee.id})
+
         self.filtered(lambda hol: not hol.validation_type == 'both' and not hol.third_approval).action_validate()
 
+        self.filtered(lambda hol: not hol.validation_type == 'both' and  hol.third_approval).write(
+            {'state': 'validate2', 'first_approver_id': current_employee.id})
         if not self.env.context.get('leave_fast_create'):
             self.activity_update()
         return True
